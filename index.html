@@ -373,6 +373,14 @@
 
     <div class="group-title">API Request <span style="color:var(--muted); font-weight:400;">(dạng curl)</span></div>
 
+    <div class="mock-toggle" id="proxyToggle" style="margin-bottom:12px;">
+      <div>
+        <div class="lbl">Dùng Proxy (né CORS)</div>
+        <div class="sub">Gửi qua /api/proxy thay vì gọi thẳng từ trình duyệt</div>
+      </div>
+      <div class="switch" id="proxySwitch"></div>
+    </div>
+
     <div class="row">
       <select id="reqMethod" style="background:var(--panel-2); border:1px solid var(--line); border-radius:8px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:9px 8px; width:90px;">
         <option selected>GET</option>
@@ -411,6 +419,7 @@
 
 <script>
 let mockMode = true;
+let useProxy = false;
 let liffReady = false;
 
 const logFeed = document.getElementById('logFeed');
@@ -452,6 +461,14 @@ mockToggle.addEventListener('click', () => {
   mockMode = !mockMode;
   mockSwitch.classList.toggle('on', mockMode);
   log('mode.toggle', 'info', { mockMode });
+});
+
+const proxyToggle = document.getElementById('proxyToggle');
+const proxySwitch = document.getElementById('proxySwitch');
+proxyToggle.addEventListener('click', () => {
+  useProxy = !useProxy;
+  proxySwitch.classList.toggle('on', useProxy);
+  log('proxy.toggle', 'info', { useProxy, note: useProxy ? 'Request sẽ đi qua /api/proxy (server Vercel, region hnd1).' : 'Request gọi thẳng từ trình duyệt.' });
 });
 
 document.getElementById('clearBtn').addEventListener('click', () => {
@@ -647,11 +664,29 @@ document.getElementById('reqSendBtn').addEventListener('click', async () => {
   }
 
   const label = `${method} ${url}`;
-  log(label, 'info', { headers: maskedHeaders, body: (method !== 'GET' && bodyRaw) ? bodyRaw : undefined });
+  log(label, 'info', { headers: maskedHeaders, body: (method !== 'GET' && bodyRaw) ? bodyRaw : undefined, viaProxy: useProxy });
 
   try{
-    const res = await fetch(url, opts);
-    let data;
+    let res, data;
+
+    if(useProxy){
+      // Gửi qua serverless function /api/proxy (chạy trên server Vercel, không bị CORS chặn)
+      const proxyRes = await fetch('/api/proxy', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, method, headers, body: (method !== 'GET' && bodyRaw) ? bodyRaw : undefined })
+      });
+      const proxyData = await proxyRes.json();
+      if(!proxyRes.ok){
+        log(`${method} ${url} (qua proxy) → lỗi proxy ${proxyRes.status}`, 'err', proxyData);
+        return;
+      }
+      log(`${method} ${url} (qua proxy) → ${proxyData.targetStatus}`, proxyData.targetOk ? 'ok' : 'err', proxyData.data);
+      return;
+    }
+
+    // Gọi thẳng từ trình duyệt (có thể dính CORS nếu server đích không cho phép)
+    res = await fetch(url, opts);
     const contentType = res.headers.get('content-type') || '';
     if(contentType.includes('application/json')){
       data = await res.json();
@@ -660,7 +695,7 @@ document.getElementById('reqSendBtn').addEventListener('click', async () => {
     }
     log(`${method} ${url} → ${res.status}`, res.ok ? 'ok' : 'err', data);
   }catch(err){
-    log(label, 'err', { message: err.message + ' — nếu là "Failed to fetch": có thể do (1) mixed content (trang https gọi ra http), hoặc (2) server chưa bật CORS cho phép gọi từ origin này.' });
+    log(label, 'err', { message: err.message + ' — nếu là "Failed to fetch": có thể do (1) mixed content (trang https gọi ra http), hoặc (2) server chưa bật CORS cho phép gọi từ origin này. Thử bật "Dùng Proxy" ở trên để né lỗi này.' });
   }
 });
 
