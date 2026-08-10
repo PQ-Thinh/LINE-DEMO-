@@ -263,6 +263,40 @@
     font-size:12.5px;
     padding:6px 2px;
   }
+  .header-row{
+    display:flex;
+    align-items:center;
+    gap:4px;
+    margin-bottom:7px;
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+  }
+  .header-row .prefix{
+    color:var(--muted);
+    flex-shrink:0;
+  }
+  .header-row input{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:6px;
+    color:var(--text);
+    font-family:'JetBrains Mono',monospace;
+    font-size:11.5px;
+    padding:7px 8px;
+    margin-bottom:0;
+  }
+  .header-row .hkey{ width:38%; }
+  .header-row .hval{ flex:1; }
+  .header-row .rm{
+    background:none;
+    border:none;
+    color:var(--muted);
+    cursor:pointer;
+    font-size:14px;
+    padding:2px 4px;
+    flex-shrink:0;
+  }
+  .header-row .rm:hover{ color:var(--err); }
   .banner{
     background:#1c1608;
     border:1px solid #3a2e10;
@@ -309,6 +343,11 @@
       <span>liff.init()</span><span class="tag">setup</span>
     </button>
 
+    <span class="field-label" style="margin-top:14px;">Channel Access Token</span>
+    <input type="text" id="channelToken" placeholder="dùng cho Service Message API (server-side)">
+    <span class="field-label" style="margin-top:14px;">Template name</span>
+    <input type="text" id="templateName" placeholder="reservation_confirmation_en">
+
     <div class="group-title">Environment / Trạng thái</div>
     <button class="api-btn" data-fn="isInClient"><span>liff.isInClient()</span><span class="tag">env</span></button>
     <button class="api-btn" data-fn="isLoggedIn"><span>liff.isLoggedIn()</span><span class="tag">env</span></button>
@@ -327,6 +366,34 @@
     <div class="group-title">Cửa sổ</div>
     <button class="api-btn" data-fn="openWindow"><span>liff.openWindow()</span><span class="tag">window</span></button>
     <button class="api-btn" data-fn="closeWindow"><span>liff.closeWindow()</span><span class="tag">window</span></button>
+
+    <div class="group-title">Service Message API <span style="color:var(--muted); font-weight:400;">(server-side thật)</span></div>
+    <button class="api-btn" id="getNotifTokenBtn"><span>POST /notifier/token</span><span class="tag">svc</span></button>
+    <button class="api-btn" id="sendServiceMsgBtn"><span>POST /notifier/send</span><span class="tag">svc</span></button>
+
+    <div class="group-title">API Request <span style="color:var(--muted); font-weight:400;">(dạng curl)</span></div>
+
+    <div class="row">
+      <select id="reqMethod" style="background:var(--panel-2); border:1px solid var(--line); border-radius:8px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:12.5px; padding:9px 8px; width:90px;">
+        <option selected>GET</option>
+        <option>POST</option>
+        <option>PUT</option>
+        <option>PATCH</option>
+        <option>DELETE</option>
+      </select>
+      <input type="text" id="reqUrl" value="https://de-genki.genkimiru.jp/api/v1/user/animationIcon" placeholder="https://your-domain.com/api/v1/...">
+    </div>
+
+    <span class="field-label" style="margin-top:6px;">Headers (-H)</span>
+    <div id="headerRows"></div>
+    <button class="clear-btn" id="addHeaderBtn" style="width:100%; margin-bottom:12px; text-align:center;">+ Thêm header</button>
+
+    <span class="field-label">Body (chỉ dùng khi không phải GET)</span>
+    <textarea id="reqBody" rows="3" placeholder='{"key": "value"}' style="width:100%; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11.5px; margin-bottom:10px; resize:vertical;"></textarea>
+
+    <button class="api-btn primary" id="reqSendBtn">
+      <span>Gửi request</span><span class="tag">fetch</span>
+    </button>
 
   </div>
 
@@ -458,6 +525,144 @@ async function callReal(fn){
     default: throw new Error('Không rõ hàm: ' + fn);
   }
 }
+
+// ---- Service Message API (server-side, gọi thẳng từ trình duyệt để test nhanh) ----
+const SVC_BASE = 'https://api.line.me/message/v3';
+
+document.getElementById('getNotifTokenBtn').addEventListener('click', async () => {
+  const token = document.getElementById('channelToken').value.trim();
+  const label = 'POST /notifier/token';
+
+  if(mockMode){
+    log(label, 'mock', { notificationToken: '34c11a03-mock-token', remainingCount: 5 });
+    return;
+  }
+  if(!token){
+    log(label, 'err', { message: 'Cần nhập Channel Access Token trước.' });
+    return;
+  }
+  if(!liffReady){
+    log(label, 'err', { message: 'Cần liff.init() trước để lấy liffAccessToken.' });
+    return;
+  }
+  try{
+    const liffAccessToken = liff.getAccessToken();
+    log(label, 'info', { message: 'Đang gọi với liffAccessToken hiện tại...' });
+    const res = await fetch(`${SVC_BASE}/notifier/token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ liffAccessToken })
+    });
+    const data = await res.json();
+    log(label, res.ok ? 'ok' : 'err', data);
+    if(data.notificationToken) window.__lastNotificationToken = data.notificationToken;
+  }catch(err){
+    log(label, 'err', { message: err.message + ' (có thể do CORS nếu domain chưa được LINE cho phép gọi trực tiếp từ trình duyệt — nếu vậy hãy gọi qua server của bạn thay vì client)' });
+  }
+});
+
+document.getElementById('sendServiceMsgBtn').addEventListener('click', async () => {
+  const token = document.getElementById('channelToken').value.trim();
+  const templateName = document.getElementById('templateName').value.trim();
+  const label = 'POST /notifier/send';
+
+  if(mockMode){
+    log(label, 'mock', { notificationToken: '34c11a03-mock-token-2', remainingCount: 4 });
+    return;
+  }
+  if(!token || !templateName){
+    log(label, 'err', { message: 'Cần nhập Channel Access Token và Template name.' });
+    return;
+  }
+  const notificationToken = window.__lastNotificationToken;
+  if(!notificationToken){
+    log(label, 'err', { message: 'Chưa có notificationToken — hãy bấm POST /notifier/token trước.' });
+    return;
+  }
+  try{
+    log(label, 'info', { templateName, notificationToken });
+    const res = await fetch(`${SVC_BASE}/notifier/send?target=service`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+      body: JSON.stringify({ templateName, notificationToken, params: {} })
+    });
+    const data = await res.json();
+    log(label, res.ok ? 'ok' : 'err', data);
+    if(data.notificationToken) window.__lastNotificationToken = data.notificationToken;
+  }catch(err){
+    log(label, 'err', { message: err.message + ' (kiểm tra CORS / gọi qua server nếu trình duyệt chặn)' });
+  }
+});
+
+// ---- API Request (dạng curl): dựng header rows động ----
+const headerRows = document.getElementById('headerRows');
+
+function addHeaderRow(key = '', value = '', placeholder = ''){
+  const row = document.createElement('div');
+  row.className = 'header-row';
+  row.innerHTML = `
+    <span class="prefix">-H</span>
+    <input type="text" class="hkey" value="${key}" placeholder="Key">
+    <span class="prefix">:</span>
+    <input type="text" class="hval" value="${value}" placeholder="${placeholder || 'Value'}">
+    <button class="rm" title="Xoá header">✕</button>
+  `;
+  row.querySelector('.rm').addEventListener('click', () => row.remove());
+  headerRows.appendChild(row);
+}
+
+// 4 header mặc định đúng chuẩn curl bạn dùng — chỉ cần sửa phần nội dung (value)
+addHeaderRow('Content-Type', 'application/json');
+addHeaderRow('Authorization', 'Basic Z2Vua2l1c2VyOmdlbmtpcGFzc3dvcmQ=');
+addHeaderRow('timezone', 'Asia/Tokyo');
+addHeaderRow('token', '', 'ĐIỀN_TOKEN_CỦA_USER_VÀO_ĐÂY');
+
+document.getElementById('addHeaderBtn').addEventListener('click', () => addHeaderRow());
+
+document.getElementById('reqSendBtn').addEventListener('click', async () => {
+  const method = document.getElementById('reqMethod').value;
+  const url = document.getElementById('reqUrl').value.trim();
+  const bodyRaw = document.getElementById('reqBody').value.trim();
+
+  if(!url){
+    log(`${method} (chưa nhập URL)`, 'err', { message: 'Vui lòng nhập URL trước khi gửi.' });
+    return;
+  }
+
+  const headers = {};
+  const maskedHeaders = {};
+  headerRows.querySelectorAll('.header-row').forEach(row => {
+    const k = row.querySelector('.hkey').value.trim();
+    const v = row.querySelector('.hval').value.trim();
+    if(!k || !v) return;
+    headers[k] = v;
+    maskedHeaders[k] = (k.toLowerCase() === 'token' || k.toLowerCase() === 'authorization')
+      ? v.slice(0, 6) + '…(ẩn bớt trong log)'
+      : v;
+  });
+
+  const opts = { method, headers };
+  if(method !== 'GET' && method !== 'DELETE' && bodyRaw){
+    opts.body = bodyRaw;
+  }
+
+  const label = `${method} ${url}`;
+  log(label, 'info', { headers: maskedHeaders, body: (method !== 'GET' && bodyRaw) ? bodyRaw : undefined });
+
+  try{
+    const res = await fetch(url, opts);
+    let data;
+    const contentType = res.headers.get('content-type') || '';
+    if(contentType.includes('application/json')){
+      data = await res.json();
+    }else{
+      data = await res.text();
+    }
+    log(`${method} ${url} → ${res.status}`, res.ok ? 'ok' : 'err', data);
+  }catch(err){
+    log(label, 'err', { message: err.message + ' — nếu là "Failed to fetch": có thể do (1) mixed content (trang https gọi ra http), hoặc (2) server chưa bật CORS cho phép gọi từ origin này.' });
+  }
+});
 
 document.querySelectorAll('button[data-fn]').forEach(btn => {
   btn.addEventListener('click', async () => {
