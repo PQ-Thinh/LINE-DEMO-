@@ -324,20 +324,9 @@
 
   <div class="panel">
 
-    <div class="banner">
-      Trang này chạy ngoài LINE / ngoài domain đã đăng ký endpoint URL, nên <b>liff.init() thật sẽ báo lỗi</b> (LIFF chỉ hoạt động đúng khi mở trong LIFF Browser của LINE, với domain khớp Endpoint URL đã khai báo trên Console). Bật <b>Mock mode</b> bên dưới để xem trước hình dạng response, hoặc nhập LIFF ID thật và mở link này trong app LINE để test thật.
-    </div>
+    <input type="hidden" id="liffId" value="2011049422-qJ4mlrge">
 
-    <div class="mock-toggle" id="mockToggle">
-      <div>
-        <div class="lbl">Mock mode</div>
-        <div class="sub">Giả lập response, không gọi LIFF thật</div>
-      </div>
-      <div class="switch on" id="mockSwitch"></div>
-    </div>
-
-    <span class="field-label">LIFF ID</span>
-    <input type="text" id="liffId" placeholder="1234567890-AbCdEfGh">
+    <!-- Đã ẩn ô input LIFF ID vì gán cứng -->
 
     <button class="api-btn primary" id="initBtn">
       <span>liff.init()</span><span class="tag">setup</span>
@@ -420,15 +409,13 @@
 </div>
 
 <script>
-let mockMode = true;
+let mockMode = false;
 let useProxy = false;
 let liffReady = false;
 
 const logFeed = document.getElementById('logFeed');
 const statusPill = document.getElementById('statusPill');
 const statusText = document.getElementById('statusText');
-const mockSwitch = document.getElementById('mockSwitch');
-const mockToggle = document.getElementById('mockToggle');
 
 function timeNow(){
   const d = new Date();
@@ -459,11 +446,7 @@ function setStatus(ok, text){
   statusText.textContent = text;
 }
 
-mockToggle.addEventListener('click', () => {
-  mockMode = !mockMode;
-  mockSwitch.classList.toggle('on', mockMode);
-  log('mode.toggle', 'info', { mockMode });
-});
+
 
 const proxyToggle = document.getElementById('proxyToggle');
 const proxySwitch = document.getElementById('proxySwitch');
@@ -478,34 +461,32 @@ document.getElementById('clearBtn').addEventListener('click', () => {
 });
 
 // ---- init ----
-document.getElementById('initBtn').addEventListener('click', async () => {
-  const liffId = document.getElementById('liffId').value.trim();
-
-  if(mockMode){
-    log('liff.init()', 'mock', { liffId: liffId || '(trống, dùng mock)', message: 'Đây là dữ liệu giả lập — không có kết nối thật tới LINE Platform.' });
-    liffReady = true;
-    setStatus(true, 'mock ready');
-    return;
-  }
-
-  if(!liffId){
-    log('liff.init()', 'err', { message: 'Vui lòng nhập LIFF ID thật (lấy từ LINE Developers Console) trước khi tắt Mock mode.' });
-    setStatus(false, 'thiếu LIFF ID');
-    return;
-  }
-
-  log('liff.init()', 'info', { liffId });
+const autoInit = async () => {
+  const liffId = '2011049422-qJ4mlrge';
+  log('liff.init()', 'info', { liffId, message: 'Đang tự động khởi tạo...' });
   try{
     await liff.init({ liffId });
     liffReady = true;
     setStatus(true, 'init thành công');
     log('liff.init()', 'ok', { message: 'Khởi tạo thành công.' });
+    
+    // Tự động lấy param ngay sau khi init
+    const p = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+    log('Auto getUrlParams', 'info', { 
+      message: 'LIFF SDK đã tự động restore URL. Đây là các custom params bạn truyền vào:',
+      params: Object.keys(p).length ? p : '(Không có param nào trên URL)'
+    });
   }catch(err){
     liffReady = false;
     setStatus(false, 'init thất bại');
     log('liff.init()', 'err', { name: err.name, message: err.message });
   }
-});
+};
+
+// Chạy tự động khi load trang
+window.addEventListener('DOMContentLoaded', autoInit);
+
+document.getElementById('initBtn').addEventListener('click', autoInit);
 
 // ---- mock data ----
 const mockData = {
