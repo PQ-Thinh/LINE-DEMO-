@@ -471,10 +471,20 @@ const autoInit = async () => {
     log('liff.init()', 'ok', { message: 'Khởi tạo thành công.' });
     
     // Tự động lấy param ngay sau khi init
-    const p = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+    const params = new URLSearchParams(window.location.search);
+    const userId = params.get('userId');
+    const source = params.get('source');
+    const allParams = Object.fromEntries(params.entries());
+    
+    // Lấy thêm phần đường dẫn (path) phía sau domain
+    const pathName = window.location.pathname;
+    
     log('Auto getUrlParams', 'info', { 
-      message: 'LIFF SDK đã tự động restore URL. Đây là các custom params bạn truyền vào:',
-      params: Object.keys(p).length ? p : '(Không có param nào trên URL)'
+      message: 'LIFF SDK đã tự động restore URL. Đây là các custom params & đường dẫn (path) bạn truyền vào:',
+      duong_dan_chuyen_huong: pathName,
+      userId_ban_truyen: userId || '(không thấy)',
+      source_ban_truyen: source || '(không thấy)',
+      toan_bo_params_khac: Object.keys(allParams).length ? allParams : '(Trống)'
     });
   }catch(err){
     liffReady = false;
