@@ -354,6 +354,8 @@
     <button class="api-btn" data-fn="getOS"><span>liff.getOS()</span><span class="tag">env</span></button>
     <button class="api-btn" data-fn="getLanguage"><span>liff.getAppLanguage()</span><span class="tag">env</span></button>
     <button class="api-btn" data-fn="getVersion"><span>liff.getVersion()</span><span class="tag">env</span></button>
+    <button class="api-btn" data-fn="state"><span>liff.state</span><span class="tag">env</span></button>
+    <button class="api-btn" data-fn="getUrlParams"><span>Lấy Custom URL Params</span><span class="tag">url</span></button>
 
     <div class="group-title">Profile</div>
     <button class="api-btn" data-fn="login"><span>liff.login()</span><span class="tag">auth</span></button>
@@ -512,6 +514,14 @@ const mockData = {
   getOS: () => ({ result: 'ios' }),
   getLanguage: () => ({ result: 'vi-VN' }),
   getVersion: () => ({ result: '2.24.0' }),
+  state: () => ({ result: 'some_mock_state_string' }),
+  getUrlParams: () => {
+    const params = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+    return { 
+      message: 'Các tham số trên thanh địa chỉ hiện tại (nếu có liff.state bị mã hoá nghĩa là chưa qua liff.init thật):',
+      params: Object.keys(params).length ? params : '(Không có param nào trên URL)'
+    };
+  },
   login: () => ({ message: 'Sẽ redirect sang màn hình đăng nhập LINE thật khi chạy trong môi trường LIFF thật.' }),
   getProfile: () => ({
     userId: 'U4af4980629...(mock)',
@@ -533,6 +543,13 @@ async function callReal(fn){
     case 'getOS': return { result: liff.getOS() };
     case 'getLanguage': return { result: liff.getAppLanguage() };
     case 'getVersion': return { result: liff.getVersion() };
+    case 'state': return { result: liff.state };
+    case 'getUrlParams':
+      const p = Object.fromEntries(new URLSearchParams(window.location.search).entries());
+      return { 
+        message: 'LIFF SDK đã tự động restore URL (liff.state đã được bung). Đây là các custom params bạn truyền vào:',
+        params: Object.keys(p).length ? p : '(Không có param nào trên URL)'
+      };
     case 'login': liff.login(); return { message: 'Đang chuyển hướng...' };
     case 'getProfile': return await liff.getProfile();
     case 'shareTargetPicker': return await liff.shareTargetPicker([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
