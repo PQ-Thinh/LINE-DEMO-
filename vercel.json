@@ -1,7 +1,8 @@
 {
-  "functions": {
-    "api/*.js": {
-      "regions": ["hnd1"]
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
-  }
+  ]
 }
