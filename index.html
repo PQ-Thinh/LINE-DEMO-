@@ -358,6 +358,14 @@
     <button class="api-btn" data-fn="openWindow"><span>liff.openWindow()</span><span class="tag">window</span></button>
     <button class="api-btn" data-fn="closeWindow"><span>liff.closeWindow()</span><span class="tag">window</span></button>
 
+    <div class="group-title">Hardware / Phần cứng</div>
+    <button class="api-btn" data-fn="scanCodeV2"><span>liff.scanCodeV2()</span><span class="tag">camera</span></button>
+    <button class="api-btn" data-fn="isApiAvailableScanCode"><span>liff.isApiAvailable('scanCodeV2')</span><span class="tag">check</span></button>
+    <button class="api-btn" data-fn="initPluginsBT"><span>liff.initPlugins(['bluetooth'])</span><span class="tag">ble</span></button>
+    <button class="api-btn" data-fn="getBTAvailability"><span>liff.bluetooth.getAvailability()</span><span class="tag">ble</span></button>
+    <button class="api-btn" data-fn="requestBTDevice"><span>liff.bluetooth.requestDevice()</span><span class="tag">ble</span></button>
+    <button class="api-btn" data-fn="getGeolocation"><span>navigator.geolocation (GPS)</span><span class="tag">gps</span></button>
+
     <div class="group-title">Service Message API <span style="color:var(--muted); font-weight:400;">(server-side thật)</span></div>
     <button class="api-btn" id="getNotifTokenBtn"><span>POST /notifier/token</span><span class="tag">svc</span></button>
     <button class="api-btn" id="sendServiceMsgBtn"><span>POST /notifier/send</span><span class="tag">svc</span></button>
@@ -523,7 +531,13 @@ const mockData = {
   shareTargetPicker: () => ({ status: 'success', message: 'Đã gửi tới danh sách bạn bè được chọn (mock).' }),
   sendMessages: () => ({ message: 'sendMessages() chỉ hoạt động khi Mini App đang mở trong LINE (isInClient = true).' }),
   openWindow: () => ({ url: 'https://developers.line.biz/en/docs/line-mini-app/', external: true }),
-  closeWindow: () => ({ message: 'Sẽ đóng LIFF Browser khi chạy trong app LINE thật.' })
+  closeWindow: () => ({ message: 'Sẽ đóng LIFF Browser khi chạy trong app LINE thật.' }),
+  scanCodeV2: () => ({ value: 'https://example.com/mock-qr-code-data' }),
+  isApiAvailableScanCode: () => ({ result: true }),
+  initPluginsBT: () => ({ message: 'Đã khởi tạo plugin Bluetooth (mock).' }),
+  getBTAvailability: () => ({ result: true, message: 'Bluetooth đang bật (mock).' }),
+  requestBTDevice: () => ({ id: 'mock-ble-device-id', name: 'Mock BLE Sensor' }),
+  getGeolocation: () => ({ latitude: 10.762622, longitude: 106.660172, accuracy: '10 meters (mock)' })
 };
 
 // ---- real calls ----
@@ -547,6 +561,23 @@ async function callReal(fn){
     case 'sendMessages': return await liff.sendMessages([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
     case 'openWindow': return liff.openWindow({ url: 'https://developers.line.biz/en/docs/line-mini-app/', external: true });
     case 'closeWindow': return liff.closeWindow();
+    case 'scanCodeV2': return await liff.scanCodeV2();
+    case 'isApiAvailableScanCode': return { result: liff.isApiAvailable('scanCodeV2') };
+    case 'initPluginsBT': return await liff.initPlugins(['bluetooth']);
+    case 'getBTAvailability': return await liff.bluetooth.getAvailability();
+    case 'requestBTDevice': return await liff.bluetooth.requestDevice();
+    case 'getGeolocation':
+      return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) return reject(new Error('Geolocation không được hỗ trợ trên trình duyệt này.'));
+        navigator.geolocation.getCurrentPosition(
+          pos => resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+            accuracy: pos.coords.accuracy + ' meters'
+          }),
+          err => reject(new Error(err.message))
+        );
+      });
     default: throw new Error('Không rõ hàm: ' + fn);
   }
 }
