@@ -559,7 +559,7 @@ async function callReal(fn){
     case 'getProfile': return await liff.getProfile();
     case 'shareTargetPicker': return await liff.shareTargetPicker([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
     case 'sendMessages': return await liff.sendMessages([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
-    case 'openWindow': return liff.openWindow({ url: 'https://www.expedia.com.vn/', external: false });
+    case 'openWindow': return liff.openWindow({ url: 'https://developers.line.biz/en/docs/line-mini-app/', external: false });
     case 'closeWindow': return liff.closeWindow();
     case 'scanCodeV2': return await liff.scanCodeV2();
     case 'isApiAvailableScanCode': return { result: liff.isApiAvailable('scanCodeV2') };
