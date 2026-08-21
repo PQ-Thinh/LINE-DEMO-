@@ -331,12 +331,6 @@
     <button class="api-btn primary" id="initBtn">
       <span>liff.init()</span><span class="tag">setup</span>
     </button>
-    
-    <a href="index.html" style="text-decoration:none; display:block; margin-bottom:14px;">
-      <button class="api-btn" type="button" style="border-color: var(--muted); color: var(--muted); pointer-events: none;">
-        <span>&larr; Quay lại luồng Đăng nhập</span><span class="tag">auth</span>
-      </button>
-    </a>
 
     <span class="field-label" style="margin-top:14px;">Channel Access Token</span>
     <input type="text" id="channelToken" placeholder="dùng cho Service Message API (server-side)">
@@ -371,6 +365,72 @@
     <button class="api-btn" data-fn="getBTAvailability"><span>liff.bluetooth.getAvailability()</span><span class="tag">ble</span></button>
     <button class="api-btn" data-fn="requestBTDevice"><span>liff.bluetooth.requestDevice()</span><span class="tag">ble</span></button>
     <button class="api-btn" data-fn="getGeolocation"><span>navigator.geolocation (GPS)</span><span class="tag">gps</span></button>
+    <button class="api-btn" data-fn="testMicrophone"><span>🎤 Test Microphone</span><span class="tag">mic</span></button>
+    <div id="micVisualizer" style="display:none; margin-top:8px; margin-bottom:10px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#ff5c5c;animation:blink 1s infinite;"></div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--err);">Đang ghi âm...</span>
+        <span id="micTimer" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--muted);margin-left:auto;">3s</span>
+      </div>
+      <div style="height:6px;background:var(--panel-2);border-radius:3px;overflow:hidden;">
+        <div id="micLevel" style="height:100%;width:0%;background:linear-gradient(90deg,var(--accent),#5aa9ff);border-radius:3px;transition:width 0.05s;"></div>
+      </div>
+      <audio id="micPlayback" controls style="width:100%;margin-top:8px;display:none;height:32px;"></audio>
+    </div>
+    <style>@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}</style>
+
+    <div class="group-title">Voice Input <span style="color:var(--muted); font-weight:400;">(Speech-to-Text)</span></div>
+    <div style="display:flex; gap:6px; margin-bottom:8px;">
+      <select id="sttLang" style="background:var(--panel-2); border:1px solid var(--line); border-radius:8px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11.5px; padding:8px; flex-shrink:0;">
+        <option value="vi-VN" selected>🇻🇳 Tiếng Việt</option>
+        <option value="en-US">🇺🇸 English</option>
+        <option value="ja-JP">🇯🇵 日本語</option>
+        <option value="zh-CN">🇨🇳 中文</option>
+        <option value="ko-KR">🇰🇷 한국어</option>
+      </select>
+      <button class="api-btn" id="sttBtn" style="flex:1; margin-bottom:0;">
+        <span id="sttBtnLabel">🎙️ Bắt đầu nghe</span>
+        <span class="tag">stt</span>
+      </button>
+    </div>
+    <div id="sttPanel" style="display:none; margin-bottom:12px;">
+      <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+        <div id="sttWave" style="display:flex; align-items:center; gap:2px; height:20px;">
+          <div class="wave-bar"></div><div class="wave-bar"></div><div class="wave-bar"></div>
+          <div class="wave-bar"></div><div class="wave-bar"></div>
+        </div>
+        <span id="sttStatus" style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);">Đang nghe...</span>
+      </div>
+      <div id="sttResult" style="background:var(--bg); border:1px solid var(--line); border-radius:8px; padding:10px 12px; font-family:'JetBrains Mono',monospace; font-size:12px; color:var(--text); min-height:40px; line-height:1.6; white-space:pre-wrap; word-break:break-word;"><span style="color:var(--muted);">Hãy nói gì đó...</span></div>
+      <div style="display:flex; gap:6px; margin-top:8px;">
+        <select id="sttTarget" style="flex:1; background:var(--panel-2); border:1px solid var(--line); border-radius:8px; color:var(--text); font-family:'JetBrains Mono',monospace; font-size:11px; padding:7px 8px;">
+          <option value="">Chọn ô để điền text...</option>
+          <option value="reqUrl">URL Request</option>
+          <option value="reqBody">Body Request</option>
+          <option value="channelToken">Channel Access Token</option>
+          <option value="templateName">Template Name</option>
+        </select>
+        <button class="clear-btn" id="sttFillBtn" style="flex-shrink:0;">Điền →</button>
+        <button class="clear-btn" id="sttCopyBtn" style="flex-shrink:0;">📋 Copy</button>
+      </div>
+    </div>
+    <style>
+      .wave-bar{
+        width:3px; height:4px; border-radius:2px; background:var(--accent);
+        animation:waveAnim 0.6s ease-in-out infinite alternate;
+      }
+      .wave-bar:nth-child(1){animation-delay:0s; height:6px;}
+      .wave-bar:nth-child(2){animation-delay:0.1s; height:12px;}
+      .wave-bar:nth-child(3){animation-delay:0.2s; height:18px;}
+      .wave-bar:nth-child(4){animation-delay:0.3s; height:12px;}
+      .wave-bar:nth-child(5){animation-delay:0.4s; height:6px;}
+      @keyframes waveAnim{
+        0%{height:4px; opacity:0.4;}
+        100%{height:18px; opacity:1;}
+      }
+      #sttBtn.listening{border-color:var(--err); background:#2a1218;}
+      #sttBtn.listening .tag{background:#3a1414; color:var(--err);}
+    </style>
 
     <div class="group-title">Service Message API <span style="color:var(--muted); font-weight:400;">(server-side thật)</span></div>
     <button class="api-btn" id="getNotifTokenBtn"><span>POST /notifier/token</span><span class="tag">svc</span></button>
@@ -543,7 +603,9 @@ const mockData = {
   initPluginsBT: () => ({ message: 'Đã khởi tạo plugin Bluetooth (mock).' }),
   getBTAvailability: () => ({ result: true, message: 'Bluetooth đang bật (mock).' }),
   requestBTDevice: () => ({ id: 'mock-ble-device-id', name: 'Mock BLE Sensor' }),
-  getGeolocation: () => ({ latitude: 10.762622, longitude: 106.660172, accuracy: '10 meters (mock)' })
+  getGeolocation: () => ({ latitude: 10.762622, longitude: 106.660172, accuracy: '10 meters (mock)' }),
+  testMicrophone: () => ({ message: 'Micro hoạt động bình thường (mock).', sampleRate: 44100, channels: 1, duration: '3s' }),
+  speechToText: () => ({ message: 'Nhận dạng giọng nói thành công (mock).', transcript: 'Xin chào, đây là kết quả mock của speech-to-text.', lang: 'vi-VN', confidence: 0.95 })
 };
 
 // ---- real calls ----
@@ -565,7 +627,7 @@ async function callReal(fn){
     case 'getProfile': return await liff.getProfile();
     case 'shareTargetPicker': return await liff.shareTargetPicker([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
     case 'sendMessages': return await liff.sendMessages([{ type: 'text', text: 'Xin chào từ LIFF API Tester!' }]);
-    case 'openWindow': return liff.openWindow({ url: 'https://developers.line.biz/en/docs/line-mini-app/', external: false });
+    case 'openWindow': return liff.openWindow({ url: 'https://developers.line.biz/en/docs/line-mini-app/', external: true });
     case 'closeWindow': return liff.closeWindow();
     case 'scanCodeV2': return await liff.scanCodeV2();
     case 'isApiAvailableScanCode': return { result: liff.isApiAvailable('scanCodeV2') };
@@ -584,9 +646,261 @@ async function callReal(fn){
           err => reject(new Error(err.message))
         );
       });
+    case 'testMicrophone':
+      return testMicrophoneReal();
     default: throw new Error('Không rõ hàm: ' + fn);
   }
 }
+
+// ---- Test Microphone ----
+async function testMicrophoneReal() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    throw new Error('Trình duyệt không hỗ trợ getUserMedia (cần HTTPS).');
+  }
+
+  const visualizer = document.getElementById('micVisualizer');
+  const micLevel = document.getElementById('micLevel');
+  const micTimer = document.getElementById('micTimer');
+  const micPlayback = document.getElementById('micPlayback');
+  const RECORD_SECONDS = 3;
+
+  visualizer.style.display = 'block';
+  micPlayback.style.display = 'none';
+  micLevel.style.width = '0%';
+
+  const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  const source = audioCtx.createMediaStreamSource(stream);
+  const analyser = audioCtx.createAnalyser();
+  analyser.fftSize = 256;
+  source.connect(analyser);
+  const dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+  const mediaRecorder = new MediaRecorder(stream);
+  const chunks = [];
+  mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+
+  mediaRecorder.start();
+  log('testMicrophone', 'info', { message: `Đang ghi âm ${RECORD_SECONDS} giây... Hãy nói gì đó!` });
+
+  let remaining = RECORD_SECONDS;
+  micTimer.textContent = remaining + 's';
+  const countdown = setInterval(() => {
+    remaining--;
+    micTimer.textContent = remaining + 's';
+    if (remaining <= 0) clearInterval(countdown);
+  }, 1000);
+
+  let animId;
+  function drawLevel() {
+    analyser.getByteFrequencyData(dataArray);
+    const avg = dataArray.reduce((a, b) => a + b, 0) / dataArray.length;
+    const pct = Math.min(100, (avg / 128) * 100);
+    micLevel.style.width = pct + '%';
+    animId = requestAnimationFrame(drawLevel);
+  }
+  drawLevel();
+
+  return new Promise((resolve) => {
+    mediaRecorder.onstop = () => {
+      cancelAnimationFrame(animId);
+      clearInterval(countdown);
+      stream.getTracks().forEach(t => t.stop());
+      audioCtx.close();
+
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      const url = URL.createObjectURL(blob);
+      micPlayback.src = url;
+      micPlayback.style.display = 'block';
+      micLevel.style.width = '100%';
+      micTimer.textContent = '✓';
+
+      resolve({
+        message: 'Ghi âm hoàn tất! Bấm play bên dưới nút Test Microphone để nghe lại.',
+        duration: RECORD_SECONDS + 's',
+        mimeType: mediaRecorder.mimeType,
+        blobSize: (blob.size / 1024).toFixed(1) + ' KB',
+        sampleRate: audioCtx.sampleRate || 'N/A'
+      });
+    };
+
+    setTimeout(() => {
+      if (mediaRecorder.state === 'recording') mediaRecorder.stop();
+    }, RECORD_SECONDS * 1000);
+  });
+}
+
+// ---- Speech-to-Text (Voice Input) ----
+let sttRecognition = null;
+let sttIsListening = false;
+let sttFullTranscript = '';
+
+(function initSTT() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const sttBtn = document.getElementById('sttBtn');
+  const sttBtnLabel = document.getElementById('sttBtnLabel');
+  const sttPanel = document.getElementById('sttPanel');
+  const sttResult = document.getElementById('sttResult');
+  const sttStatus = document.getElementById('sttStatus');
+  const sttLang = document.getElementById('sttLang');
+  const sttFillBtn = document.getElementById('sttFillBtn');
+  const sttCopyBtn = document.getElementById('sttCopyBtn');
+  const sttTarget = document.getElementById('sttTarget');
+  const sttWave = document.getElementById('sttWave');
+
+  if (!SpeechRecognition) {
+    sttBtn.addEventListener('click', () => {
+      log('speechToText', 'err', { message: 'Trình duyệt không hỗ trợ Web Speech API. Hãy dùng Chrome hoặc Edge.' });
+    });
+    return;
+  }
+
+  function startListening() {
+    sttRecognition = new SpeechRecognition();
+    sttRecognition.lang = sttLang.value;
+    sttRecognition.continuous = true;
+    sttRecognition.interimResults = true;
+    sttRecognition.maxAlternatives = 1;
+
+    sttFullTranscript = '';
+    sttResult.innerHTML = '<span style="color:var(--muted);">Hãy nói gì đó...</span>';
+    sttPanel.style.display = 'block';
+    sttBtn.classList.add('listening');
+    sttBtnLabel.textContent = '⏹ Dừng nghe';
+    sttStatus.textContent = 'Đang nghe...';
+    sttStatus.style.color = 'var(--accent)';
+    sttWave.style.display = 'flex';
+    sttIsListening = true;
+
+    log('speechToText', 'info', { message: 'Bắt đầu nhận dạng giọng nói...', lang: sttLang.value });
+
+    sttRecognition.onresult = (event) => {
+      let interim = '';
+      let finalText = '';
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        const transcript = event.results[i][0].transcript;
+        if (event.results[i].isFinal) {
+          finalText += transcript;
+        } else {
+          interim += transcript;
+        }
+      }
+      if (finalText) {
+        sttFullTranscript += finalText;
+        log('speechToText', 'ok', {
+          message: 'Đoạn text hoàn chỉnh:',
+          text: finalText,
+          confidence: (event.results[event.resultIndex][0].confidence * 100).toFixed(1) + '%'
+        });
+      }
+      sttResult.innerHTML = '';
+      if (sttFullTranscript) {
+        const finalSpan = document.createElement('span');
+        finalSpan.style.color = 'var(--text)';
+        finalSpan.textContent = sttFullTranscript;
+        sttResult.appendChild(finalSpan);
+      }
+      if (interim) {
+        const interimSpan = document.createElement('span');
+        interimSpan.style.color = 'var(--muted)';
+        interimSpan.style.fontStyle = 'italic';
+        interimSpan.textContent = interim;
+        sttResult.appendChild(interimSpan);
+      }
+    };
+
+    sttRecognition.onerror = (event) => {
+      log('speechToText', 'err', { error: event.error, message: getSTTErrorMessage(event.error) });
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        stopListening();
+      }
+    };
+
+    sttRecognition.onend = () => {
+      if (sttIsListening) {
+        try { sttRecognition.start(); } catch(e) { stopListening(); }
+      }
+    };
+
+    sttRecognition.start();
+  }
+
+  function stopListening() {
+    sttIsListening = false;
+    if (sttRecognition) {
+      try { sttRecognition.stop(); } catch(e) {}
+      sttRecognition = null;
+    }
+    sttBtn.classList.remove('listening');
+    sttBtnLabel.textContent = '🎙️ Bắt đầu nghe';
+    sttStatus.textContent = 'Đã dừng';
+    sttStatus.style.color = 'var(--muted)';
+    sttWave.style.display = 'none';
+
+    if (sttFullTranscript) {
+      log('speechToText', 'ok', {
+        message: 'Kết thúc nhận dạng giọng nói.',
+        toan_bo_text: sttFullTranscript,
+        do_dai: sttFullTranscript.length + ' ký tự'
+      });
+    }
+  }
+
+  function getSTTErrorMessage(error) {
+    const map = {
+      'no-speech': 'Không nghe thấy giọng nói. Hãy nói to hơn hoặc kiểm tra micro.',
+      'audio-capture': 'Không thể truy cập microphone. Kiểm tra thiết bị.',
+      'not-allowed': 'Quyền microphone bị từ chối. Hãy cấp quyền trong cài đặt trình duyệt.',
+      'network': 'Lỗi mạng. Speech recognition cần kết nối internet (Chrome gửi audio lên server Google).',
+      'aborted': 'Nhận dạng bị huỷ.',
+      'service-not-allowed': 'Dịch vụ speech recognition không khả dụng.'
+    };
+    return map[error] || 'Lỗi không xác định: ' + error;
+  }
+
+  sttBtn.addEventListener('click', () => {
+    if (sttIsListening) {
+      stopListening();
+    } else {
+      startListening();
+    }
+  });
+
+  sttFillBtn.addEventListener('click', () => {
+    if (!sttFullTranscript) {
+      log('speechToText', 'err', { message: 'Chưa có text nào để điền. Hãy nói trước!' });
+      return;
+    }
+    const targetId = sttTarget.value;
+    if (!targetId) {
+      log('speechToText', 'err', { message: 'Hãy chọn ô muốn điền text vào.' });
+      return;
+    }
+    const target = document.getElementById(targetId);
+    if (target) {
+      target.value = sttFullTranscript;
+      target.focus();
+      target.style.borderColor = 'var(--accent)';
+      setTimeout(() => { target.style.borderColor = ''; }, 1500);
+      log('speechToText', 'ok', { message: `Đã điền text vào "${targetId}".`, text: sttFullTranscript });
+    }
+  });
+
+  sttCopyBtn.addEventListener('click', async () => {
+    if (!sttFullTranscript) {
+      log('speechToText', 'err', { message: 'Chưa có text nào để copy.' });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(sttFullTranscript);
+      sttCopyBtn.textContent = '✓ Copied!';
+      setTimeout(() => { sttCopyBtn.textContent = '📋 Copy'; }, 1500);
+      log('speechToText', 'ok', { message: 'Đã copy text vào clipboard.', text: sttFullTranscript });
+    } catch(e) {
+      log('speechToText', 'err', { message: 'Không thể copy: ' + e.message });
+    }
+  });
+})();
 
 // ---- Service Message API (server-side, gọi thẳng từ trình duyệt để test nhanh) ----
 const SVC_BASE = 'https://api.line.me/message/v3';
